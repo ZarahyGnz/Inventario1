@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reportes de Productos</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #4caf50;
+      color: white;
+    }
+    button {
+      padding: 5px 10px;
+      margin: 2px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .editar { background: #2196f3; color: white; }
+    .guardar { background: #4caf50; color: white; }
+    .eliminar { background: #f44336; color: white; }
+    .volver {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+    }
+    input.editable {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Reporte de Productos</h1>
+  <table id="tablaProductos">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Cantidad</th>
+        <th>Precio</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <a href="dashboard.html" class="volver">⬅ Volver al Dashboard</a>
+
+  <script>
+    let productos = JSON.parse(localStorage.getItem('productos')) || [];
+    const tabla = document.querySelector('#tablaProductos tbody');
+
+    function renderTabla() {
+      tabla.innerHTML = "";
+      productos.forEach((p, index) => {
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+          <td>${p.codigo}</td>
+          <td><span class="texto">${p.nombre}</span><input class="editable" type="text" value="${p.nombre}" style="display:none"></td>
+          <td><span class="texto">${p.categoria}</span><input class="editable" type="text" value="${p.categoria}" style="display:none"></td>
+          <td><span class="texto">${p.cantidad}</span><input class="editable" type="number" value="${p.cantidad}" style="display:none" min="0"></td>
+          <td><span class="texto">${p.precio}</span><input class="editable" type="number" value="${p.precio}" step="0.01" style="display:none" min="0"></td>
+          <td>
+            <button class="editar" onclick="editarFila(this)">Editar</button>
+            <button class="guardar" onclick="guardarFila(this)" style="display:none">Guardar</button>
+            <button class="eliminar" onclick="eliminarProducto(${index})">Eliminar</button>
+          </td>
+        `;
+        tabla.appendChild(row);
+      });
+      localStorage.setItem('productos', JSON.stringify(productos));
+    }
+
+    function editarFila(btn) {
+      const tr = btn.closest('tr');
+      tr.querySelectorAll('span.texto').forEach(span => span.style.display = 'none');
+      tr.querySelectorAll('input.editable').forEach(input => input.style.display = 'inline-block');
+      btn.style.display = 'none';
+      tr.querySelector('button.guardar').style.display = 'inline-block';
+    }
+
+    function guardarFila(btn) {
+      const tr = btn.closest('tr');
+      const index = Array.from(tr.parentNode.children).indexOf(tr);
+
+      const inputs = tr.querySelectorAll('input.editable');
+      const [nombreInput, categoriaInput, cantidadInput, precioInput] = inputs;
+
+      // Validaciones básicas
+      if (!nombreInput.value.trim() || !categoriaInput.value.trim() || cantidadInput.value === '' || precioInput.value === '') return;
+
+      productos[index].nombre = nombreInput.value.trim();
+      productos[index].categoria = categoriaInput.value.trim();
+      productos[index].cantidad = parseInt(cantidadInput.value);
+      productos[index].precio = parseFloat(precioInput.value);
+
+      localStorage.setItem('productos', JSON.stringify(productos));
+      renderTabla();
+    }
+
+    function eliminarProducto(index) {
+      if (confirm("¿Estás seguro de eliminar este producto?")) {
+        productos.splice(index, 1);
+        localStorage.setItem('productos', JSON.stringify(productos));
+        renderTabla();
+      }
+    }
+
+    renderTabla();
+  </script>
+</body>
+</html>

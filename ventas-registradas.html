@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ventas Registradas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 2rem 1rem;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #fff;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      text-shadow: 1px 1px 6px rgba(0,0,0,0.3);
+      user-select: none;
+    }
+    .contenedor {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    thead tr {
+      background: #667eea;
+      color: white;
+      text-align: left;
+      user-select: none;
+    }
+    thead th, tbody td {
+      padding: 12px 15px;
+    }
+    tbody tr {
+      border-bottom: 1px solid #ddd;
+      transition: background-color 0.3s ease;
+    }
+    tbody tr:hover {
+      background-color: #f0f4ff;
+    }
+    tbody td:last-child {
+      text-align: center;
+    }
+    button {
+      background: #764ba2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.1rem;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 0 0.25rem;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #5a3680;
+    }
+    .botones-descarga {
+      margin-top: 1.5rem;
+      text-align: right;
+      user-select: none;
+    }
+    a.volver {
+      margin-top: 1.5rem;
+      display: inline-block;
+      color: #667eea;
+      font-weight: 600;
+      text-decoration: none;
+      user-select: none;
+    }
+    a.volver:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      thead tr {
+        font-size: 0.9rem;
+      }
+      tbody td {
+        font-size: 0.85rem;
+      }
+      button {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Ventas Registradas</h1>
+    <table id="tablaVentas">
+      <thead>
+        <tr>
+          <th>Fecha y Hora</th>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Cantidad</th>
+          <th>Total (Q)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filas con ventas dinámicas -->
+      </tbody>
+    </table>
+
+    <div class="botones-descarga">
+      <button id="btnDescargarPDF">Descargar PDF</button>
+      <button id="btnDescargarExcel">Descargar Excel</button>
+    </div>
+
+    <a href="dashboard.html" class="volver">⬅ Volver al Dashboard</a>
+  </div>
+
+  <!-- jsPDF y SheetJS para exportar -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    // Obtener ventas de localStorage
+    let ventas = JSON.parse(localStorage.getItem('ventasRegistradas')) || [];
+
+    const tablaBody = document.querySelector('#tablaVentas tbody');
+
+    function renderizarVentas() {
+      tablaBody.innerHTML = '';
+      if (ventas.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align:center; padding: 1rem; color:#777;">No hay ventas registradas.</td>';
+        tablaBody.appendChild(tr);
+        return;
+      }
+      ventas.forEach((venta, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${venta.fechaHora}</td>
+          <td>${venta.codigo}</td>
+          <td>${venta.nombre}</td>
+          <td>${venta.cantidad}</td>
+          <td>Q${venta.total.toFixed(2)}</td>
+          <td>
+            <button onclick="editarVenta(${idx})" title="Editar">✏️</button>
+            <button onclick="eliminarVenta(${idx})" title="Eliminar">🗑️</button>
+          </td>
+        `;
+        tablaBody.appendChild(tr);
+      });
+    }
+
+    function eliminarVenta(idx) {
+      ventas.splice(idx, 1);
+      localStorage.setItem('ventasRegistradas', JSON.stringify(ventas));
+      renderizarVentas();
+    }
+
+    function editarVenta(idx) {
+      const venta = ventas[idx];
+      const nuevaCantidad = prompt(`Editar cantidad vendida para "${venta.nombre}" (Código: ${venta.codigo}):`, venta.cantidad);
+      if (nuevaCantidad === null) return; // Canceló
+      const cantNum = parseInt(nuevaCantidad);
+      if (isNaN(cantNum) || cantNum < 1) {
+        alert('Cantidad inválida.');
+        return;
+      }
+      // Actualizar cantidad y total
+      venta.cantidad = cantNum;
+      venta.total = cantNum * (obtenerPrecioProducto(venta.codigo) || 0);
+      ventas[idx] = venta;
+      localStorage.setItem('ventasRegistradas', JSON.stringify(ventas));
+      renderizarVentas();
+    }
+
+    function obtenerPrecioProducto(codigo) {
+      const productos = JSON.parse(localStorage.getItem('productos')) || [];
+      const prod = productos.find(p => p.codigo === codigo);
+      return prod ? prod.precio : 0;
+    }
+
+    // Exportar a PDF con jsPDF
+    document.getElementById('btnDescargarPDF').addEventListener('click', () => {
+      if (ventas.length === 0) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text('Reporte de Ventas Registradas', 14, 22);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+
+      const columnas = ["Fecha y Hora", "Código", "Nombre", "Cantidad", "Total (Q)"];
+      const filas = ventas.map(v => [
+        v.fechaHora,
+        v.codigo,
+        v.nombre,
+        v.cantidad.toString(),
+        `Q${v.total.toFixed(2)}`
+      ]);
+
+      doc.autoTable({
+        head: [columnas],
+        body: filas,
+        startY: 30,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [102, 126, 234] },
+        alternateRowStyles: { fillColor: [240, 244, 255] },
+      });
+      doc.save('ventas-registradas.pdf');
+    });
+
+    // Exportar a Excel con SheetJS
+    document.getElementById('btnDescargarExcel').addEventListener('click', () => {
+      if (ventas.length === 0) return;
+
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["Fecha y Hora", "Código", "Nombre", "Cantidad", "Total (Q)"],
+        ...ventas.map(v => [
+          v.fechaHora,
+          v.codigo,
+          v.nombre,
+          v.cantidad,
+          v.total.toFixed(2)
+        ])
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+      XLSX.writeFile(wb, "ventas-registradas.xlsx");
+    });
+
+    renderizarVentas();
+  </script>
+
+  <!-- jsPDF Autotable plugin CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</body>
+</html>

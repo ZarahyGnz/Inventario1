@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Registrar Venta</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* Reset y base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    color: #333;
+  }
+  h1 {
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    max-width: 400px;
+    width: 100%;
+    padding: 2rem;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #555;
+  }
+  input[type="text"],
+  input[type="number"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1.5px solid #ddd;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 8px rgba(102,126,234,0.4);
+  }
+  #totalDisplay {
+    margin-top: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+    text-align: center;
+    user-select: none;
+  }
+  button {
+    margin-top: 2rem;
+    width: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border: none;
+    padding: 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 15px rgba(102,126,234,0.6);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  button:hover {
+    background: linear-gradient(90deg, #5566d9, #5e3c94);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.9);
+  }
+  .message {
+    max-width: 400px;
+    margin: 1rem auto 0;
+    padding: 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+  }
+  .message.success {
+    background-color: #d4edda;
+    color: #155724;
+    box-shadow: 0 0 10px #28a745aa;
+  }
+  .message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    box-shadow: 0 0 10px #dc3545aa;
+  }
+  .links {
+    margin-top: 2rem;
+    text-align: center;
+  }
+  .links a {
+    margin: 0 0.75rem;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    transition: background 0.3s;
+  }
+  .links a:hover {
+    background: rgba(255,255,255,0.4);
+  }
+</style>
+</head>
+<body>
+
+<h1>Registrar Venta</h1>
+
+<div class="card">
+  <label for="nombreProducto">Nombre del producto:</label>
+  <input type="text" id="nombreProducto" placeholder="Ingrese nombre del producto" autocomplete="off" />
+
+  <label for="categoriaProducto">Categoría:</label>
+  <input type="text" id="categoriaProducto" readonly />
+
+  <label for="precioProducto">Precio unitario:</label>
+  <input type="number" id="precioProducto" readonly />
+
+  <label for="cantidadVenta" style="margin-top: 1.25rem;">Cantidad a vender:</label>
+  <input type="number" id="cantidadVenta" min="1" placeholder="Cantidad" />
+
+  <div id="totalDisplay">Total: Q0.00</div>
+
+  <button id="confirmarVenta">Confirmar Venta</button>
+</div>
+
+<div class="message success" id="mensajeExito">Venta registrada correctamente.</div>
+<div class="message error" id="mensajeError">Error: Producto no encontrado o cantidad insuficiente.</div>
+
+<div class="links">
+  <a href="ventas-registradas.html">🧾 Ver Ventas Registradas</a>
+  <a href="productos.html">📦 Gestionar Productos</a>
+</div>
+
+<script>
+  const inputNombre = document.getElementById('nombreProducto');
+  const inputCategoria = document.getElementById('categoriaProducto');
+  const inputPrecio = document.getElementById('precioProducto');
+  const inputCantidad = document.getElementById('cantidadVenta');
+  const totalDisplay = document.getElementById('totalDisplay');
+  const mensajeExito = document.getElementById('mensajeExito');
+  const mensajeError = document.getElementById('mensajeError');
+  const btnConfirmar = document.getElementById('confirmarVenta');
+
+  let productos = JSON.parse(localStorage.getItem('productos')) || [];
+  let ventas = JSON.parse(localStorage.getItem('ventasRegistradas')) || [];
+  let productoSeleccionado = null;
+
+  function actualizarCampos() {
+    const nombre = inputNombre.value.trim().toLowerCase();
+    productoSeleccionado = productos.find(p => p.nombre.toLowerCase() === nombre);
+    if (productoSeleccionado) {
+      inputCategoria.value = productoSeleccionado.categoria;
+      inputPrecio.value = productoSeleccionado.precio;
+      calcularTotal();
+    } else {
+      inputCategoria.value = '';
+      inputPrecio.value = '';
+      totalDisplay.textContent = "Total: Q0.00";
+    }
+  }
+
+  function calcularTotal() {
+    const cantidad = parseInt(inputCantidad.value);
+    if (!productoSeleccionado || isNaN(cantidad) || cantidad < 1) {
+      totalDisplay.textContent = "Total: Q0.00";
+      return;
+    }
+    const total = productoSeleccionado.precio * cantidad;
+    totalDisplay.textContent = `Total: Q${total.toFixed(2)}`;
+  }
+
+  inputNombre.addEventListener('input', () => {
+    mensajeExito.style.display = 'none';
+    mensajeError.style.display = 'none';
+    actualizarCampos();
+  });
+  inputCantidad.addEventListener('input', () => {
+    mensajeExito.style.display = 'none';
+    mensajeError.style.display = 'none';
+    calcularTotal();
+  });
+
+  btnConfirmar.addEventListener('click', () => {
+    const cantidad = parseInt(inputCantidad.value);
+    mensajeExito.style.display = 'none';
+    mensajeError.style.display = 'none';
+
+    if (!productoSeleccionado || isNaN(cantidad) || cantidad < 1) {
+      mensajeError.textContent = "Por favor completa todos los campos correctamente.";
+      mensajeError.style.display = 'block';
+      return;
+    }
+
+    if (productoSeleccionado.cantidad < cantidad) {
+      mensajeError.textContent = "Cantidad insuficiente en inventario.";
+      mensajeError.style.display = 'block';
+      return;
+    }
+
+    // Actualizar inventario
+    productoSeleccionado.cantidad -= cantidad;
+    localStorage.setItem('productos', JSON.stringify(productos));
+
+    // Registrar venta
+    const venta = {
+      fechaHora: new Date().toLocaleString(),
+      nombre: productoSeleccionado.nombre,
+      categoria: productoSeleccionado.categoria,
+      cantidad: cantidad,
+      total: productoSeleccionado.precio * cantidad
+    };
+    ventas.push(venta);
+    localStorage.setItem('ventasRegistradas', JSON.stringify(ventas));
+
+    // Mostrar mensaje éxito
+    mensajeExito.style.display = 'block';
+
+    // Reset campos y total
+    inputNombre.value = '';
+    inputCategoria.value = '';
+    inputPrecio.value = '';
+    inputCantidad.value = '';
+    totalDisplay.textContent = "Total: Q0.00";
+  });
+</script>
+
+</body>
+</html>

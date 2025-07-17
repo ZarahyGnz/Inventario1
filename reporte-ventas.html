@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reporte de Ventas</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background-color: #4f46e5;
+      color: white;
+    }
+    button {
+      background: linear-gradient(to right, #4f46e5, #06b6d4);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      margin-right: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #3730a3;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Reporte de Ventas</h1>
+
+    <div style="margin-bottom: 1rem;">
+      <button id="btnDescargarPDF">Descargar PDF</button>
+      <button id="btnDescargarExcel">Descargar Excel</button>
+    </div>
+
+    <table id="tablaVentas">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Cantidad</th>
+          <th>Precio Unitario</th>
+          <th>Total</th>
+          <th>Fecha y Hora</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <a href="dashboard.html">⬅ Volver</a>
+  </div>
+
+  <!-- Librerías externas para PDF y Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    const ventas = JSON.parse(localStorage.getItem('ventas')) || [];
+    const tbody = document.querySelector('#tablaVentas tbody');
+
+    function mostrarVentas() {
+      tbody.innerHTML = '';
+      if (ventas.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="7" style="text-align:center;">No hay ventas registradas.</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+
+      ventas.forEach(v => {
+        const tr = document.createElement('tr');
+        const fechaLocal = new Date(v.fecha).toLocaleString();
+        tr.innerHTML = `
+          <td>${v.codigo}</td>
+          <td>${v.nombre}</td>
+          <td>${v.categoria}</td>
+          <td>${v.cantidad}</td>
+          <td>Q${v.precioUnitario.toFixed(2)}</td>
+          <td>Q${v.total.toFixed(2)}</td>
+          <td>${fechaLocal}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    mostrarVentas();
+
+    // Descargar PDF
+    document.getElementById('btnDescargarPDF').addEventListener('click', () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text('Reporte de Ventas', 14, 22);
+
+      const columnas = ["Código", "Nombre", "Categoría", "Cantidad", "Precio Unitario", "Total", "Fecha y Hora"];
+      const filas = ventas.map(v => [
+        v.codigo,
+        v.nombre,
+        v.categoria,
+        v.cantidad.toString(),
+        "Q" + v.precioUnitario.toFixed(2),
+        "Q" + v.total.toFixed(2),
+        new Date(v.fecha).toLocaleString()
+      ]);
+
+      doc.autoTable({
+        head: [columnas],
+        body: filas,
+        startY: 30,
+        theme: 'striped',
+        styles: { fontSize: 8 }
+      });
+
+      doc.save('reporte_ventas.pdf');
+    });
+
+    // Descargar Excel
+    document.getElementById('btnDescargarExcel').addEventListener('click', () => {
+      if (ventas.length === 0) return;
+
+      const ws_data = [
+        ["Código", "Nombre", "Categoría", "Cantidad", "Precio Unitario", "Total", "Fecha y Hora"],
+        ...ventas.map(v => [
+          v.codigo,
+          v.nombre,
+          v.categoria,
+          v.cantidad,
+          v.precioUnitario,
+          v.total,
+          new Date(v.fecha).toLocaleString()
+        ])
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+
+      XLSX.writeFile(wb, "reporte_ventas.xlsx");
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión de Productos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- Librerías para exportar Excel y PDF -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF AutoTable plugin -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .contenedor {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    h1 {
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      user-select: none;
+    }
+    .botones {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #764ba2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      flex: 1 1 150px;
+    }
+    button:hover {
+      background: #5a3680;
+    }
+    #scanner {
+      margin-bottom: 1.5rem;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 100%;
+      display: none;
+    }
+    #reader {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border-radius: 12px;
+    }
+    .formulario {
+      display: none;
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    .formulario input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      margin: 0.5rem 0 1rem 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .formulario input[readonly] {
+      background-color: #e0e0e0;
+    }
+    .formulario button {
+      width: 100%;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .formulario button:hover {
+      background: #5663c7;
+    }
+    .export-buttons {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+      user-select: none;
+    }
+    thead tr {
+      background: #667eea;
+      color: white;
+      text-align: left;
+    }
+    thead th, tbody td {
+      padding: 12px 15px;
+    }
+    tbody tr {
+      border-bottom: 1px solid #ddd;
+      transition: background-color 0.3s ease;
+    }
+    tbody tr:hover {
+      background-color: #f0f4ff;
+    }
+    tbody td:last-child {
+      text-align: center;
+      white-space: nowrap;
+    }
+    tbody button {
+      background: #764ba2;
+      padding: 0.3rem 0.8rem;
+      margin: 0 0.15rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    tbody button:hover {
+      background: #5a3680;
+    }
+    a.volver {
+      display: inline-block;
+      margin-top: 1rem;
+      color: #667eea;
+      font-weight: 600;
+      text-decoration: none;
+      user-select: none;
+    }
+    a.volver:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      .botones {
+        flex-direction: column;
+      }
+      button {
+        flex: 1 1 100%;
+      }
+      .formulario input {
+        font-size: 0.9rem;
+      }
+      .export-buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Gestión de Productos</h1>
+
+    <div class="botones">
+      <button id="btnEscanear">📷 Escanear Código</button>
+      <button id="btnAgregar">➕ Agregar Producto</button>
+      <button id="btnBuscar">🔍 Buscar Producto</button>
+    </div>
+
+    <div id="scanner">
+      <div id="reader"></div>
+    </div>
+
+    <div class="formulario" id="formularioProducto">
+      <input type="text" id="codigo" placeholder="Código (auto o escaneado)" readonly />
+      <input type="text" id="nombre" placeholder="Nombre" />
+      <input type="text" id="categoria" placeholder="Categoría" />
+      <input type="number" id="cantidad" placeholder="Cantidad" min="1" />
+      <input type="number" id="precio" placeholder="Precio (Q)" min="0" step="0.01" />
+      <button id="guardarProducto">Guardar Producto</button>
+    </div>
+
+    <div class="formulario" id="formularioBusqueda" style="display:none;">
+      <input type="text" id="busquedaInput" placeholder="Buscar por nombre, código o categoría..." />
+    </div>
+
+    <div class="export-buttons">
+      <button id="exportExcel">📥 Descargar Excel</button>
+      <button id="exportPDF">📥 Descargar PDF</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Cantidad</th>
+          <th>Precio (Q)</th>
+          <th>Fecha y Hora</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaProductos"></tbody>
+    </table>
+
+    <a href="dashboard.html" class="volver">⬅ Volver al Dashboard</a>
+  </div>
+
+<script>
+  let productos = JSON.parse(localStorage.getItem('productos') || '[]');
+  let escanerActivo = null;
+  let editandoIdx = null;
+
+  const tablaProductos = document.getElementById('tablaProductos');
+  const formularioProducto = document.getElementById('formularioProducto');
+  const formularioBusqueda = document.getElementById('formularioBusqueda');
+  const busquedaInput = document.getElementById('busquedaInput');
+
+  // Botones
+  document.getElementById('btnEscanear').onclick = () => {
+    mostrarScanner();
+  };
+  document.getElementById('btnAgregar').onclick = () => {
+    mostrarFormularioAgregar();
+  };
+  document.getElementById('btnBuscar').onclick = () => {
+    mostrarFormularioBusqueda();
+  };
+
+  // Mostrar scanner
+  function mostrarScanner() {
+    formularioProducto.style.display = 'none';
+    formularioBusqueda.style.display = 'none';
+    document.getElementById('scanner').style.display = 'block';
+    if (escanerActivo) return; // Ya activo
+    escanerActivo = new Html5Qrcode("reader");
+    escanerActivo.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: 250,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+        ],
+      },
+      (decodedText) => {
+        escanerActivo.stop();
+        escanerActivo = null;
+
+        const nuevoCodigo = generarCodigoUnicoBasadoEnEscaneo(decodedText);
+        document.getElementById('codigo').value = nuevoCodigo;
+        document.getElementById('scanner').style.display = 'none';
+      },
+      (error) => {
+        // silencioso
+      }
+    ).catch(err => {
+      console.error(err);
+    });
+  }
+
+  // Mostrar formulario para agregar manualmente
+  function mostrarFormularioAgregar() {
+    document.getElementById('scanner').style.display = 'none';
+    formularioBusqueda.style.display = 'none';
+    formularioProducto.style.display = 'block';
+    editandoIdx = null;
+    limpiarFormulario();
+    document.getElementById('codigo').value = generarCodigoUnico();
+    document.getElementById('codigo').readOnly = true;
+  }
+
+  // Mostrar formulario búsqueda
+  function mostrarFormularioBusqueda() {
+    document.getElementById('scanner').style.display = 'none';
+    formularioProducto.style.display = 'none';
+    formularioBusqueda.style.display = 'block';
+    busquedaInput.value = '';
+    filtrarProductos('');
+  }
+
+  // Limpiar formulario
+  function limpiarFormulario() {
+    ['codigo','nombre','categoria','cantidad','precio'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+
+  // Generar código único para productos agregados manualmente
+  function generarCodigoUnico() {
+    return 'PRD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000);
+  }
+
+  // Generar código único basado en código escaneado (con sufijo incremental)
+  function generarCodigoUnicoBasadoEnEscaneo(baseCodigo) {
+    const coincidencias = productos.filter(p => p.codigo.startsWith(baseCodigo + '-'));
+    let contador = coincidencias.length + 1;
+    const sufijo = String(contador).padStart(3, '0');
+    return `${baseCodigo}-${sufijo}`;
+  }
+
+  // Guardar producto (agregar o editar)
+  document.getElementById('guardarProducto').onclick = () => {
+    const codigo = document.getElementById('codigo').value.trim();
+    const nombre = document.getElementById('nombre').value.trim();
+    const categoria = document.getElementById('categoria').value.trim();
+    const cantidad = parseInt(document.getElementById('cantidad').value);
+    const precio = parseFloat(document.getElementById('precio').value);
+
+    if (!nombre || !categoria || isNaN(cantidad) || isNaN(precio) || cantidad < 1 || precio < 0) {
+      return; // No hacer nada si datos inválidos
+    }
+
+    const fechaHoraActual = new Date().toLocaleString();
+
+    if (editandoIdx !== null) {
+      // Editar producto existente
+      productos[editandoIdx] = { codigo, nombre, categoria, cantidad, precio, fechaHora: productos[editandoIdx].fechaHora || fechaHoraActual };
+      editandoIdx = null;
+    } else {
+      // Agregar nuevo producto
+      productos.push({ codigo, nombre, categoria, cantidad, precio, fechaHora: fechaHoraActual });
+    }
+
+    localStorage.setItem('productos', JSON.stringify(productos));
+    formularioProducto.style.display = 'none';
+    renderizarTabla();
+  };
+
+  // Renderizar tabla de productos
+  function renderizarTabla() {
+    tablaProductos.innerHTML = '';
+    if (productos.length === 0) {
+      tablaProductos.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#777; padding:1rem;">No hay productos registrados.</td></tr>`;
+      return;
+    }
+    productos.forEach((prod, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${prod.codigo}</td>
+        <td>${prod.nombre}</td>
+        <td>${prod.categoria}</td>
+        <td>${prod.cantidad}</td>
+        <td>Q${prod.precio.toFixed(2)}</td>
+        <td>${prod.fechaHora || ''}</td>
+        <td>
+          <button onclick="editarProducto(${i})" title="Editar">✏️</button>
+          <button onclick="eliminarProducto(${i})" title="Eliminar">🗑️</button>
+        </td>
+      `;
+      tablaProductos.appendChild(tr);
+    });
+  }
+
+  // Editar producto
+  function editarProducto(idx) {
+    const prod = productos[idx];
+    editandoIdx = idx;
+    formularioProducto.style.display = 'block';
+    formularioBusqueda.style.display = 'none';
+    document.getElementById('scanner').style.display = 'none';
+
+    document.getElementById('codigo').value = prod.codigo;
+    document.getElementById('nombre').value = prod.nombre;
+    document.getElementById('categoria').value = prod.categoria;
+    document.getElementById('cantidad').value = prod.cantidad;
+    document.getElementById('precio').value = prod.precio;
+    document.getElementById('codigo').readOnly = true;
+  }
+
+  // Eliminar producto
+  function eliminarProducto(idx) {
+    productos.splice(idx, 1);
+    localStorage.setItem('productos', JSON.stringify(productos));
+    renderizarTabla();
+  }
+
+  // Filtrar tabla por búsqueda
+  busquedaInput.addEventListener('input', () => {
+    filtrarProductos(busquedaInput.value.trim().toLowerCase());
+  });
+
+  function filtrarProductos(filtro) {
+    const filas = tablaProductos.getElementsByTagName('tr');
+    for (let i = 0; i < filas.length; i++) {
+      const texto = filas[i].textContent.toLowerCase();
+      filas[i].style.display = texto.includes(filtro) ? '' : 'none';
+    }
+  }
+
+  // Exportar a Excel
+  document.getElementById('exportExcel').onclick = () => {
+    if (productos.length === 0) {
+      alert('No hay productos para exportar.');
+      return;
+    }
+    const ws_data = [
+      ['Código', 'Nombre', 'Categoría', 'Cantidad', 'Precio (Q)', 'Fecha y Hora']
+    ];
+    productos.forEach(p => {
+      ws_data.push([p.codigo, p.nombre, p.categoria, p.cantidad, p.precio, p.fechaHora || '']);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+    XLSX.writeFile(wb, 'productos.xlsx');
+  };
+
+  // Exportar a PDF con AutoTable
+  document.getElementById('exportPDF').onclick = () => {
+    if (productos.length === 0) {
+      alert('No hay productos para exportar.');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text('Listado de Productos', 14, 20);
+
+    const columns = [
+      { header: 'Código', dataKey: 'codigo' },
+      { header: 'Nombre', dataKey: 'nombre' },
+      { header: 'Categoría', dataKey: 'categoria' },
+      { header: 'Cantidad', dataKey: 'cantidad' },
+      { header: 'Precio (Q)', dataKey: 'precio' },
+      { header: 'Fecha y Hora', dataKey: 'fechaHora' }
+    ];
+
+    // Preparar datos para AutoTable
+    const rows = productos.map(p => ({
+      codigo: p.codigo,
+      nombre: p.nombre,
+      categoria: p.categoria,
+      cantidad: p.cantidad,
+      precio: p.precio.toFixed(2),
+      fechaHora: p.fechaHora || ''
+    }));
+
+    doc.autoTable({
+      startY: 30,
+      head: [columns.map(col => col.header)],
+      body: rows.map(row => columns.map(col => row[col.dataKey])),
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [102, 126, 234], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [240, 244, 255] },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save('productos.pdf');
+  };
+
+  renderizarTabla();
+</script>
+</body>
+</html>

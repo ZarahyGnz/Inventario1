@@ -1,0 +1,59 @@
+/* Estilos generales */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f9fafb;
+  color: #111827;
+}
+
+h1 {
+  color: #4f46e5;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.login-container, .dashboard, .contenedor {
+  max-width: 600px;
+  margin: auto;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  margin-top: 3rem;
+}
+
+input, button {
+  width: 100%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+button {
+  background: linear-gradient(to right, #4f46e5, #06b6d4);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+nav a, a {
+  display: inline-block;
+  margin: 0.5rem;
+  text-decoration: none;
+  color: #06b6d4;
+}
+
+/* Tabla */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  text-align: left;
+}
